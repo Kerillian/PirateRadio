@@ -11,9 +11,10 @@ using AudioClip = UnityEngine.AudioClip;
 
 namespace PirateRadio;
 
-[BepInPlugin("kerillian.pirate.radio", "Pirate Radio", "1.0.0")]
+[BepInPlugin("kerillian.pirate.radio", "Pirate Radio", "1.1.0")]
 public class Plugin : BaseUnityPlugin
 {
+	public static ConfigEntry<KeyCode> ToggleKey;
 	public static ConfigEntry<KeyCode> SkipKey;
 	public static ConfigEntry<KeyCode> ReloadKey;
 	public static ConfigEntry<KeyCode> OpenFolderKey;
@@ -21,17 +22,18 @@ public class Plugin : BaseUnityPlugin
 	private new static ManualLogSource Logger;
 	private static Harmony harmony;
 
-	private static readonly string SongFolder = Path.Combine(Application.streamingAssetsPath, "PirateRadio");
-	public static readonly List<AudioClip> Music = new List<AudioClip>();
-	public static RadioChannel Channel = null;
+	private static readonly string ChannelsFolder = Path.Combine(Paths.GameRootPath, "Channels");
+	public static readonly Dictionary<string, List<AudioClip>> Channels = new Dictionary<string, List<AudioClip>>();
+	
 	private static bool loading = false;
 	private static bool wasRunning = false;
 
 	private void Awake()
 	{
-		SkipKey = Config.Bind("Keybinds", "Skip", KeyCode.F1, "Skips the current track on channel.");
-		ReloadKey = Config.Bind("Keybinds", "Reload", KeyCode.F2, "Reloads all custom tracks.");
-		OpenFolderKey = Config.Bind("Keybinds", "Open", KeyCode.F3, "Opens the custom music folder.");
+		ToggleKey = Config.Bind("Keybinds", "Toggle", KeyCode.F1, "Toggles the radio on and off.");
+		SkipKey = Config.Bind("Keybinds", "Skip", KeyCode.F2, "Skips track on the current channel.");
+		ReloadKey = Config.Bind("Keybinds", "Reload", KeyCode.F3, "Reloads all custom tracks.");
+		OpenFolderKey = Config.Bind("Keybinds", "Open", KeyCode.F4, "Opens the custom music folder.");
 		
 		harmony = new Harmony(Info.Metadata.GUID);
 		harmony.PatchAll(GetType().Assembly);
@@ -39,7 +41,7 @@ public class Plugin : BaseUnityPlugin
 		Logger = base.Logger;
 		Logger.LogInfo($"Plugin {Info.Metadata.GUID} is loaded!");
 		
-		Directory.CreateDirectory(SongFolder);
+		Directory.CreateDirectory(ChannelsFolder);
 		StartCoroutine(ReloadMusic());
 	}
 
@@ -50,9 +52,26 @@ public class Plugin : BaseUnityPlugin
 			return;
 		}
 
+		if (UnityInput.Current.GetKeyDown(ToggleKey.Value))
+		{
+			if (Manager.players is { mainPlayer.vehicle.io.radio: not null })
+			{
+				VehicleRadio radio = Manager.players.mainPlayer.vehicle.io.radio;
+
+				if (radio.IsOn())
+				{
+					radio.TurnOff();
+				}
+				else
+				{
+					radio.TurnOn();
+				}
+			}
+		}
+
 		if (UnityInput.Current.GetKeyDown(SkipKey.Value))
 		{
-			if (Refs.garage != null)
+			if (Refs.garage is not null)
 			{
 				VehicleRadio radio = Refs.garage.activeVehicle.io.radio;
 
@@ -70,75 +89,91 @@ public class Plugin : BaseUnityPlugin
 		
 		if (UnityInput.Current.GetKeyDown(OpenFolderKey.Value))
 		{
-			Utility.ShowFolder(SongFolder);
+			Utility.ShowFolder(ChannelsFolder);
 		}
 	}
 
 	public IEnumerator ReloadMusic()
 	{
-		if (Channel is { playCoroutine: not null })
+		if (Refs.radioStation is { running: true })
 		{
-			if (Refs.garage != null)
+			if (Refs.garage is not null)
 			{
 				Refs.garage.activeVehicle.io.radio.TurnOff();
 			}
 			
 			wasRunning = true;
-			Channel.Enable(false);
+			Refs.radioStation.EnableRadioStation(false);
 		}
 		
 		loading = true;
 
-		foreach (AudioClip clip in Music)
+		foreach (List<AudioClip> clips in Channels.Values)
 		{
-			clip.UnloadAudioData();
+			foreach (AudioClip clip in clips)
+			{
+				clip.UnloadAudioData();
+			}
+			
+			clips.Clear();
 		}
-
-		Music.Clear();
+		
+		Channels.Clear();
 
 		yield return StartCoroutine(ScanFolder());
 		loading = false;
 
-		if (wasRunning)
+		if (wasRunning && Refs.radioStation is not null)
 		{
 			wasRunning = false;
-			Channel.Enable(true);
-			Channel.PlayNextClip();
+			Refs.radioStation.Init();
+
+			// Should fix the random audio stutter issue that happens when reloading the tracks.
+			foreach (RadioChannel channel in Refs.radioStation.channels)
+			{
+				channel.PlayNextClip();
+			}
 		}
 	}
 
-	public IEnumerator ScanFolder(string path = "")
+	public IEnumerator ScanFolder()
 	{
-		string folder = path.Length == 0 ? SongFolder : path;
-		
-		foreach (string dir in Directory.GetDirectories(folder))
+		foreach (string directory in Directory.GetDirectories(ChannelsFolder))
 		{
-			StartCoroutine(ScanFolder(dir));
-		}
+			DirectoryInfo info = new DirectoryInfo(directory);
 
-		foreach (string file in Directory.GetFiles(folder))
-		{
-			StartCoroutine(LoadFile(file));
+			if (!info.Exists)
+			{
+				continue;
+			}
+			
+			FileInfo[] files = info.GetFiles();
+
+			if (files.Length == 0)
+			{
+				continue;
+			}
+			
+			Channels.Add(info.Name, new List<AudioClip>());
+			
+			foreach (FileInfo file in files)
+			{
+				yield return StartCoroutine(LoadFile(info.Name, file));
+			}
 		}
 
 		yield return null;
 	}
 
-	public IEnumerator LoadFile(string file)
+	public IEnumerator LoadFile(string channel, FileInfo file)
 	{
-		string fileName = Path.GetFileName(file);
-		StartCoroutine(LoadAudioFromFile(file, Utility.KnuthHash(fileName), Utility.AudioTypeFromExtension(file)));
+		string songName = Utility.KnuthHash(file.Name);
+		AudioType type = Utility.AudioTypeFromExtension(file.Name);
+		string path = UnityWebRequest.EscapeURL(file.FullName);
 		
-		yield return null;
-	}
-
-	public IEnumerator LoadAudioFromFile(string file, string name, AudioType type)
-	{
-		file = UnityWebRequest.EscapeURL(file);
-
-		using UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip("file:///" + file, type);
+		using UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip("file:///" + path, type);
 		yield return www.SendWebRequest();
-
+		
 		if (www.result == UnityWebRequest.Result.ConnectionError)
 		{
 			Logger.LogError(www.error);
@@ -147,11 +182,13 @@ public class Plugin : BaseUnityPlugin
 		{
 			DownloadHandlerAudioClip handler = (DownloadHandlerAudioClip)www.downloadHandler;
 			handler.streamAudio = true;
-			handler.audioClip.name = name;
+			handler.audioClip.name = songName;
 			
-			Music.Add(handler.audioClip);
-				
-			Logger.LogInfo($"Loaded {name}");
+			Channels[channel].Add(handler.audioClip);
+			
+			Logger.LogInfo($"Loaded '{file.Name}' for channel '{channel}'");
 		}
+		
+		yield return null;
 	}
 }

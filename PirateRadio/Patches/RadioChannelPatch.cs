@@ -10,12 +10,10 @@ public class RadioChannelPatch
 	[HarmonyPrefix, HarmonyPatch(nameof(RadioChannel.Init))]
 	public static bool Init(RadioChannel __instance, RadioStation owner)
 	{
-		if (__instance.name == "Pirate Radio")
+		if (Plugin.Channels.TryGetValue(__instance.name, out List<AudioClip> clips))
 		{
-			Plugin.Channel = __instance;
-			
 			__instance.owner = owner;
-			__instance.audioClips = Plugin.Music;
+			__instance.audioClips = clips;
 			__instance.toPlay = new List<AudioClip>(__instance.audioClips);
 
 			return false;
