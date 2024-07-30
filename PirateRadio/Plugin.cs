@@ -30,10 +30,10 @@ public class Plugin : BaseUnityPlugin
 
 	private void Awake()
 	{
-		ToggleKey = Config.Bind("Keybinds", "Toggle", KeyCode.F1, "Toggles the radio on and off.");
-		SkipKey = Config.Bind("Keybinds", "Skip", KeyCode.F2, "Skips track on the current channel.");
-		ReloadKey = Config.Bind("Keybinds", "Reload", KeyCode.F3, "Reloads all custom tracks.");
-		OpenFolderKey = Config.Bind("Keybinds", "Open", KeyCode.F4, "Opens the custom music folder.");
+		ToggleKey = Config.Bind("Keybinds", "Toggle", KeyCode.F5, "Toggles the radio on and off.");
+		SkipKey = Config.Bind("Keybinds", "Skip", KeyCode.F6, "Skips track on the current channel.");
+		ReloadKey = Config.Bind("Keybinds", "Reload", KeyCode.F7, "Reloads all custom tracks.");
+		OpenFolderKey = Config.Bind("Keybinds", "Open", KeyCode.F8, "Opens the custom music folder.");
 		
 		harmony = new Harmony(Info.Metadata.GUID);
 		harmony.PatchAll(GetType().Assembly);

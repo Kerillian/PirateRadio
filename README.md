@@ -40,10 +40,10 @@ I've also added some keybinds to make the radio more enjoyable to use. They can 
 
 | Default Key | Description                               |
 |-------------|-------------------------------------------|
-| F1          | Toggle the radio                          |
-| F2          | Skip track on the current channel         |
-| F3          | Reload radio channels                     |
-| F4          | Open `Channels` folder in a file explorer |
+| F5          | Toggle the radio                          |
+| F6          | Skip track on the current channel         |
+| F7          | Reload radio channels                     |
+| F8          | Open `Channels` folder in a file explorer |
 
 
 # Supported files
