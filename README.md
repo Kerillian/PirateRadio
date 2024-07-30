@@ -35,7 +35,7 @@ All audio formats Unity supports.
 Due to requiring libraries from the game, you have to setup a MSBuild property called `ConPolPath` that points to the games install location.
 If you don't know how to add a global property I've written a few examples below for different tools.
 
-> ![NOTE]
+> [!NOTE]
 > Example of a valid path: `C:\Program Files (x86)\Steam\steamapps\common\Contraband Police`
 > - The path should be absolute
 > - No trailing slashes
