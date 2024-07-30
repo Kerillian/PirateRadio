@@ -11,7 +11,7 @@ using AudioClip = UnityEngine.AudioClip;
 
 namespace PirateRadio;
 
-[BepInPlugin("kerillian.pirate.radio", "Pirate Radio", "1.1.0")]
+[BepInPlugin("kerillian.pirate.radio", "Pirate Radio", "1.1.1")]
 public class Plugin : BaseUnityPlugin
 {
 	public static ConfigEntry<KeyCode> ToggleKey;
