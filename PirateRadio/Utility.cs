@@ -73,4 +73,25 @@ public class Utility
 			Console.Error.WriteLine(e.ToString());
 		}
 	}
+	
+	public static void ChangeChannel(VehicleRadio radio, int index)
+	{
+		int channels = Refs.radioStation.channels.Count;
+		int newIndex = (index + channels) % channels;
+			
+		radio.ChangeChannel(newIndex);
+
+		AudioZone audioZone = Helpers.GetAudioZone(radio.io.interaction.owner.transform);
+		Manager.audio.PlaySound3D("light_switch_off", radio.io.interaction.owner.transform.position, audioZone, 0.7f, 0.5f);
+	}
+
+	public static void NextChannel(VehicleRadio radio)
+	{
+		ChangeChannel(radio, radio.currentChannelID + 1);
+	}
+	
+	public static void PreviousChannel(VehicleRadio radio)
+	{
+		ChangeChannel(radio, radio.currentChannelID - 1);
+	}
 }

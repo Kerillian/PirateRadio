@@ -11,15 +11,18 @@ using AudioClip = UnityEngine.AudioClip;
 
 namespace PirateRadio;
 
-[BepInPlugin("kerillian.pirate.radio", "Pirate Radio", "1.1.1")]
+[BepInPlugin("kerillian.pirate.radio", "Pirate Radio", "1.2.0")]
 public class Plugin : BaseUnityPlugin
 {
+	public static ConfigEntry<bool> StartupMessage;
+	public static ConfigEntry<KeyCode> NextKey;
+	public static ConfigEntry<KeyCode> PreviousKey;
 	public static ConfigEntry<KeyCode> ToggleKey;
 	public static ConfigEntry<KeyCode> SkipKey;
 	public static ConfigEntry<KeyCode> ReloadKey;
 	public static ConfigEntry<KeyCode> OpenFolderKey;
 
-	private new static ManualLogSource Logger;
+	public new static ManualLogSource Logger;
 	private static Harmony harmony;
 
 	private static readonly string ChannelsFolder = Path.Combine(Paths.GameRootPath, "Channels");
@@ -30,15 +33,18 @@ public class Plugin : BaseUnityPlugin
 
 	private void Awake()
 	{
+		harmony = new Harmony(Info.Metadata.GUID);
+		Logger = base.Logger;
+
+		StartupMessage = Config.Bind("General", "StartupMessage", true, "Used internally to only show the startup message once.");
+		NextKey = Config.Bind("Keybinds", "NextChannel", KeyCode.RightArrow, "Change to the next channel.");
+		PreviousKey = Config.Bind("Keybinds", "PreviousChannel", KeyCode.LeftArrow, "Change to the previous channel.");
 		ToggleKey = Config.Bind("Keybinds", "Toggle", KeyCode.F5, "Toggles the radio on and off.");
 		SkipKey = Config.Bind("Keybinds", "Skip", KeyCode.F6, "Skips track on the current channel.");
 		ReloadKey = Config.Bind("Keybinds", "Reload", KeyCode.F7, "Reloads all custom tracks.");
 		OpenFolderKey = Config.Bind("Keybinds", "Open", KeyCode.F8, "Opens the custom music folder.");
 		
-		harmony = new Harmony(Info.Metadata.GUID);
 		harmony.PatchAll(GetType().Assembly);
-		
-		Logger = base.Logger;
 		Logger.LogInfo($"Plugin {Info.Metadata.GUID} is loaded!");
 		
 		Directory.CreateDirectory(ChannelsFolder);
@@ -52,12 +58,12 @@ public class Plugin : BaseUnityPlugin
 			return;
 		}
 
-		if (UnityInput.Current.GetKeyDown(ToggleKey.Value))
-		{
-			if (Manager.players is { mainPlayer.vehicle.io.radio: not null })
-			{
-				VehicleRadio radio = Manager.players.mainPlayer.vehicle.io.radio;
+		IInputSystem input = UnityInput.Current;
 
+		if (input.GetKeyDown(ToggleKey.Value))
+		{
+			if (Manager.players?.mainPlayer?.vehicle?.io?.radio is { isOn: true } radio)
+			{
 				if (radio.IsOn())
 				{
 					radio.TurnOff();
@@ -69,7 +75,7 @@ public class Plugin : BaseUnityPlugin
 			}
 		}
 
-		if (UnityInput.Current.GetKeyDown(SkipKey.Value))
+		if (input.GetKeyDown(SkipKey.Value))
 		{
 			if (Refs.garage is not null)
 			{
@@ -82,12 +88,28 @@ public class Plugin : BaseUnityPlugin
 			}
 		}
 
-		if (UnityInput.Current.GetKeyDown(ReloadKey.Value))
+		if (input.GetKeyDown(NextKey.Value))
+		{
+			if (Manager.players?.mainPlayer?.vehicle?.io?.radio is { isOn: true } radio)
+			{
+				Utility.NextChannel(radio);
+			}
+		}
+		
+		if (input.GetKeyDown(PreviousKey.Value))
+		{
+			if (Manager.players?.mainPlayer?.vehicle?.io?.radio is { isOn: true } radio)
+			{
+				Utility.PreviousChannel(radio);
+			}
+		}
+
+		if (input.GetKeyDown(ReloadKey.Value))
 		{
 			StartCoroutine(ReloadMusic());
 		}
 		
-		if (UnityInput.Current.GetKeyDown(OpenFolderKey.Value))
+		if (input.GetKeyDown(OpenFolderKey.Value))
 		{
 			Utility.ShowFolder(ChannelsFolder);
 		}
