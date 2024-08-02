@@ -34,16 +34,23 @@ After installing the mod and running the game once, a new folder will be created
       - Fight the power.mp3
       - etc.xm
 
+### Controls
+##### The mod completely overhauls the radio controls.
+- **Interaction** now toggles the radio state, instead of cycling through channels.
+- Using **scroll wheel** while looking at the radio selects channels.
+- The keybinds `NextChannel` and `PreviousChannel` allow you to select channels too.
 
-### Keybinds
+##### Keybinds
 I've also added some keybinds to make the radio more enjoyable to use. They can be configured by opening the config file in `BepInEx/config/kerillian.pirate.radio.cfg`
 
-| Default Key | Description                               |
-|-------------|-------------------------------------------|
-| F5          | Toggle the radio                          |
-| F6          | Skip track on the current channel         |
-| F7          | Reload radio channels                     |
-| F8          | Open `Channels` folder in a file explorer |
+| Config Name     | Default Key | Description                               |
+|-----------------|-------------|-------------------------------------------|
+| NextChannel     | RightArrow  | Select the next channel                   |
+| PreviousChannel | LeftArrow   | Select the previous channel               |
+| Toggle          | F5          | Toggle the radio                          |
+| Skip            | F6          | Skip track on the current channel         |
+| Reload          | F7          | Reload radio channels                     |
+| Open            | F8          | Open `Channels` folder in a file explorer |
 
 
 # Supported files
